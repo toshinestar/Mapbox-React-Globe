@@ -1,0 +1,377 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.25/"></script>
+    <script
+    src="https://code.jquery.com/jquery-3.6.1.min.js"
+    integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+    crossorigin="anonymous"></script>
+  </head>
+
+  <body>
+    <div id="viewDiv" />
+    
+    <div class="overlay">
+      <div>
+        <span id="play" class="button esri-icon-play" style="display: block;" />
+      </div>
+      <div>
+        <span id="pause" class="button esri-icon-pause" style="display: none;" />
+      </div>
+      <div id="label">Heading: 0&deg;</div>
+    </div>
+  </body>
+</html>
+<style>
+html,
+body,
+#viewDiv {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.overlay {
+  position: absolute;
+  width: 100%;
+  bottom: 50px;
+  left: 0px;
+  background-color: rgba(80, 80, 80, 0);
+  text-align: center;
+  font-family: "Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+body {
+  background: #526987
+}
+
+#viewDiv canvas {
+  filter: saturate(1.2) drop-shadow(0 0 20px rgba(255, 255, 255, 0));
+}
+
+.button {
+  cursor: pointer;
+  font-size: 40pt !important;
+  font-weight: bold !important;
+  color: rgb(255, 253, 253);
+}
+
+.button:hover, #label {
+  color: white;
+}
+
+.button, #label {
+  margin: 15px;
+}
+
+.esri-widget{
+  background-color: #9f9f9f;
+  font-size: 12.4px;
+}
+
+.esri-widget--button {
+  background-color: #9f9f9f;
+}
+
+.esri-layer-list__item{
+  background-color: #cbcbcb;
+}
+
+.esri-layer-list__item-container{
+  padding: 8px 4px 8px 8px;
+}
+
+.esri-view-height-small .esri-ui-corner .esri-component.esri-widget--panel{
+  max-height: 300px;
+}
+
+.esri-ui-corner .esri-component.esri-widget--panel {
+    width: 180px;
+}
+
+.esri-layer-list__item-toggle{
+  color: #000000;
+}
+
+.esri-widget--button{
+  color: #1867c2;
+}
+
+.esri-feature__content-element {
+    padding: 0 1px 20px;
+}
+
+.esri-legend__service{
+  padding: 5px 10px;
+}
+
+.esri-popup__main-container{
+  width: 30%;
+  max-height: 40%;
+}
+
+.esri-view-surface--inset-outline:focus::after {
+    outline: none !important;
+}
+
+.esri-layer-list__item-title {
+    line-height: 0.9em;
+}
+</style>
+<script>
+$(document).ready(function(){
+
+  require([
+  "esri/config",
+  "esri/views/SceneView",
+  "esri/Map",
+  "esri/widgets/Expand",
+  "esri/widgets/BasemapGallery",
+  "esri/layers/FeatureLayer",
+  "esri/widgets/LayerList",
+  "esri/widgets/Home",
+  "esri/widgets/Legend",
+  "esri/widgets/Search"
+  ], function(
+    esriConfig,
+  SceneView,
+  Map,
+  Expand,
+  BasemapGallery,
+  FeatureLayer,
+  LayerList,
+  Home,
+  Legend,
+  Search
+){
+  esriConfig.apiKey = "AAPK853e389eacab4000b8168009a957884eAeNxkMsT5xLndSZFhHgao-ynp074HaJnWU6CfSjbF8QQuZc5bL4FoHut1NkoYGYU";
+
+  var scene = new Map({
+    basemap: "hybrid",
+    ground: "world-elevation"
+  });
+
+  var view = new SceneView({
+    container: "viewDiv",
+    map: scene,
+    alphaCompositingEnabled: true,
+    qualityProfile: "high",
+    camera: {
+      position: [
+        0.0,
+        14.39845900,
+        25000000.0000,
+      ],
+      heading: 0.00,
+      tilt: 0.16,
+    },
+    environment: {
+      background: {
+        type: "color",
+        color: [255, 252, 244, 0]
+      },
+      starsEnabled: false,
+      atmosphereEnabled: false,
+      lighting: {
+        directShadowsEnabled: true,
+        date: "Sun Jun 23 2019 19:19:18 GMT+0200 (Central European Summer Time)"
+      }
+    }
+  });
+
+  var basemapGallery = new BasemapGallery({
+    view: view,
+    container: document.createElement("div")
+  });
+
+  var bgExpand = new Expand({
+    view: view,
+    content: basemapGallery
+  });
+
+  view.ui.add(bgExpand, "top-left");
+  
+  view.watch("camera.position.longitude", (longitude) => {
+    label.innerHTML = `Longitude: ${longitude.toFixed(1)}&deg;`;
+  });
+  
+  let abort = false;
+  function rotate() {
+    
+    if (!view.interacting && !abort) {
+      
+      play.style.display = "none";
+      pause.style.display = "block";
+      
+      const camera = view.camera.clone();
+      camera.position.longitude -= 0.2;
+      view.goTo(camera, { animate: false });
+      
+      requestAnimationFrame(rotate);
+    } else {
+      abort = false;
+      play.style.display = "block";
+      pause.style.display = "none";
+    }
+  }
+  
+  play.onclick = rotate;
+  pause.onclick = function() {
+    abort = true;
+  };
+
+  const offices = new FeatureLayer({
+    url: "https://services.arcgis.com/qovwaCdMoEzUUFzS/arcgis/rest/services/Offices/FeatureServer/0",
+    popupTemplate: {
+      title:"UNHCR Offices",
+      content:[{
+        type:"fields",
+        fieldInfos:[
+        {
+          fieldName:"InS_ID",
+          label:"InS_ID"
+        },{
+          fieldName:"Country",
+          label:"Country"
+        },{
+          fieldName:"Location",
+          label:"Location"
+        }
+        ]
+      }
+      ],
+      overwriteActions: false,
+    }
+  });
+
+  scene.add(offices);
+
+  const greenboxes = new FeatureLayer({
+    url: "https://services.arcgis.com/qovwaCdMoEzUUFzS/arcgis/rest/services/Green_Boxes/FeatureServer/0",
+    popupTemplate: {
+      title:"Green Boxes installed",
+      content:[{
+        type:"fields",
+        fieldInfos:[
+        {
+          fieldName:"InS_ID",
+          label:"InS_ID"
+        },{
+          fieldName:"Country",
+          label:"Country"
+        },{
+          fieldName:"Location",
+          label:"Location"
+        },{
+          fieldName:"Address",
+          label:"Address"
+        }
+        ]
+      }
+      ],
+      overwriteActions: false,
+    }
+  });
+
+  scene.add(greenboxes);
+
+  const Countries = new FeatureLayer({
+    url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/World_Countries_(Generalized)/FeatureServer/0",
+    popupTemplate: {
+      title:"UNHCR Countries",
+      content:[{
+        type:"fields",
+        fieldInfos:[
+        {
+          fieldName:"COUNTRYAFF",
+          label:"COUNTRYAFF"
+        }
+        ]
+      }
+      ],
+      overwriteActions: false,
+    }
+  });
+  const searchWidget = new Search({
+    view: view,
+    allPlaceholder: "UNHCR",
+    includeDefaultSources: false,
+    sources: [
+      {
+        layer: offices,
+        searchFields: ["InS_ID"],
+        displayField: "InS_ID",
+        exactMatch: false,
+        outFields: ["*"],
+        name: "UNHCR Offices",
+        placeholder: "example: INS#739",
+        zoomScale: 500000
+      },
+      {
+        layer: greenboxes,
+        searchFields: ["InS_ID"],
+        displayField: "InS_ID",
+        exactMatch: false,
+        outFields: ["*"],
+        name: "Green Boxes installed",
+        placeholder: "example: INS#277",
+        zoomScale: 500000
+      },      
+      {
+        layer: Countries,
+        searchFields: ["COUNTRYAFF"],
+        displayField: "COUNTRYAFF",
+        exactMatch: true,
+        outFields: ["*"],
+        name: "UNHCR Countries",
+        placeholder: "example: Colombia"
+      },
+      {
+        name: "ArcGIS World Geocoding Service",
+        placeholder: "example: Nuuk, GRL",
+        apiKey: "AAPK853e389eacab4000b8168009a957884eAeNxkMsT5xLndSZFhHgao-ynp074HaJnWU6CfSjbF8QQuZc5bL4FoHut1NkoYGYU",
+        singleLineFieldName: "SingleLine",
+        url: "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+      }
+    ]
+  });
+
+  searchWidget.on("select-result",
+  function(event){
+    console.log("The selected search result: ", event);
+    if(event.source.name !="UNHCR Countries")
+      view.goTo({
+        scale: 500000
+      });
+  });
+
+  view.ui.add(searchWidget, {
+    position: "top-right"
+  });
+
+  function shiftCamera(deg) {
+    var camera = view.camera.clone();
+    camera.position.longitude += deg;
+    return camera;
+  };
+
+  var listaCapas = new LayerList({
+    view:view,
+  });
+  view.ui.add(listaCapas,"top-right");
+
+  var homebtn = new Home({
+    view:view
+  });
+  view.ui.add(homebtn, "top-left");
+
+  var leyend = new Legend({
+    view:view
+  });
+  view.ui.add(leyend, "bottom-right")
+  
+});
+
+});
+</script>
